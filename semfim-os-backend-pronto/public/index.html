@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEM FIM OS - Sistema Completo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', 'Fira Code', 'JetBrains Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+            background: #0a0e12;
+        }
+
+        /* Tela de boot */
+        .boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s;
+        }
+
+        .boot-content {
+            text-align: center;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .boot-logo {
+            font-size: 14px;
+            color: #00ff41;
+            margin-bottom: 30px;
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        .boot-text {
+            color: #00ff41;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .progress-container {
+            width: 400px;
+            height: 2px;
+            background: #1a1a1a;
+            margin-top: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #00ff41;
+            transition: width 0.1s;
+            box-shadow: 0 0 10px #00ff41;
+        }
+
+        /* Desktop */
+        .desktop {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0e12 0%, #0f1419 100%);
+            position: relative;
+            display: none;
+        }
+
+        .wallpaper {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* Barra superior */
+        .top-bar {
+            background: rgba(10, 14, 18, 0.95);
+            backdrop-filter: blur(10px);
+            color: #00ff41;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            border-bottom: 1px solid #00ff41;
+            position: relative;
+            z-index: 10;
+            font-weight: bold;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .system-logo {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 5px #00ff41);
+        }
+
+        /* Ícones do desktop */
+        .icons {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            z-index: 5;
+        }
+
+        .icon {
+            text-align: center;
+            cursor: pointer;
+            padding: 12px;
+            transition: all 0.2s;
+            border-radius: 8px;
+            width: 100px;
+        }
+
+        .icon:hover {
+            background: rgba(0, 255, 65, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .icon-emoji {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 5px #00ff41);
+        }
+
+        .icon span {
+            color: #00ff41;
+            font-size: 11px;
+            text-shadow: 0 0 5px rgba(0,255,65,0.5);
+            font-weight: bold;
+        }
+
+        /* Terminal */
+        .terminal-window {
+            position: absolute;
+            top: 150px;
+            left: 105px;
+            width: 1140px;
+            height: 625px;
+            background: #000000;
+            border: 1px solid #1b1b1b;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            z-index: 100;
+            overflow: hidden;
+            resize: both;
+            min-width: 620px;
+            min-height: 280px;
+        }
+
+        .terminal-header {
+            background: linear-gradient(to bottom, #090909, #1a1a1a);
+            padding: 0 10px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            border-bottom: 1px solid #111;
+            cursor: move;
+            user-select: none;
+            position: relative;
+        }
+
+        .terminal-title {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 2px;
+            z-index: 2;
+        }
+
+        .control-btn {
+            width: 28px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: #f2f2f2;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .close-btn:hover {
+            background: #c42b1c;
+        }
+
+        .terminal-body {
+            padding: 10px 14px 14px;
+            height: calc(100% - 28px);
+            overflow-y: auto;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            font-size: 15px;
+            color: #00ff41;
+            background: #000000;
+        }
+
+        .terminal-line {
+            margin: 1px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.35;
+        }
+
+        .terminal-input-line {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .terminal-prompt {
+            color: #00ff41;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff41;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            font-size: 13px;
+            flex: 1;
+            outline: none;
+        }
+
+        .terminal-input:focus {
+            outline: none;
+        }
+
+        /* Navegador */
+        .browser-window {
+            position: absolute;
+            top: 80px;
+            left: 250px;
+            width: 1000px;
+            height: 600px;
+            background: #1a1a1a;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.4);
+            z-index: 200;
+        }
+
+        .browser-header {
+            background: #0a0e12;
+            padding: 10px 15px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #00ff41;
+        }
+
+        .browser-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        .browser-nav-btn {
+            background: #1a1a1a;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .browser-nav-btn:hover {
+            background: #00ff41;
+            color: #000;
+        }
+
+        .browser-url {
+            flex: 1;
+            background: #0a0e12;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .browser-frame {
+            flex: 1;
+            background: white;
+            border: none;
+            width: 100%;
+            height: calc(100% - 80px);
+        }
+
+        .browser-controls {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .browser-close {
+            background: #ff5f56;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* EXPLORADOR DE ARQUIVOS - INTERFACE GRÁFICA */
+        .explorer-window {
+            position: absolute;
+            top: 100px;
+            left: 300px;
+            width: 800px;
+            height: 500px;
+            background: #0a0e12;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.4);
+            z-index: 150;
+        }
+
+        .explorer-header {
+            background: #1a1a1a;
+            padding: 10px 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #00ff41;
+            cursor: move;
+        }
+
+        .explorer-title {
+            color: #00ff41;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .explorer-toolbar {
+            background: #0a0e12;
+            padding: 8px 15px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #00ff41;
+            flex-wrap: wrap;
+        }
+
+        .explorer-btn {
+            background: #1a1a1a;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        .explorer-btn:hover {
+            background: #00ff41;
+            color: #000;
+        }
+
+        .explorer-path {
+            background: #0a0e12;
+            color: #00ff41;
+            padding: 8px 15px;
+            border-bottom: 1px solid #00ff41;
+            font-size: 11px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .path-input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .explorer-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            align-content: start;
+        }
+
+        .explorer-item {
+            text-align: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .explorer-item:hover {
+            background: rgba(0, 255, 65, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .explorer-item-icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .explorer-item-name {
+            color: #00ff41;
+            font-size: 11px;
+            word-break: break-all;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            width: 400px;
+            color: #00ff41;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            background: #0a0e12;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .modal-content button {
+            background: #00ff41;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .editor-window {
+            position: absolute;
+            top: 150px;
+            left: 400px;
+            width: 600px;
+            height: 450px;
+            background: #0a0e12;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            z-index: 300;
+        }
+
+        .editor-header {
+            background: #1a1a1a;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #00ff41;
+            cursor: move;
+        }
+
+        .editor-title {
+            color: #00ff41;
+            font-size: 12px;
+        }
+
+        .editor-content {
+            flex: 1;
+            padding: 10px;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            background: #0a0e12;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            font-family: monospace;
+            padding: 10px;
+            resize: none;
+            outline: none;
+        }
+
+        .editor-save {
+            background: #00ff41;
+            color: #000;
+            border: none;
+            padding: 5px 15px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .scrollbar::-webkit-scrollbar { width: 8px; }
+        .scrollbar::-webkit-scrollbar-track { background: #1a1a1a; }
+        .scrollbar::-webkit-scrollbar-thumb { background: #00ff41; border-radius: 4px; }
+        .explorer-content::-webkit-scrollbar { width: 8px; }
+        .explorer-content::-webkit-scrollbar-track { background: #1a1a1a; }
+        .explorer-content::-webkit-scrollbar-thumb { background: #00ff41; border-radius: 4px; }
+
+        .neofetch-terminal {
+            display: flex;
+            gap: 26px;
+            align-items: flex-start;
+            color: #dddddd;
+            margin-bottom: 10px;
+        }
+
+        .neofetch-art {
+            color: #39ff14;
+            white-space: pre;
+            line-height: 1.05;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .neofetch-meta {
+            white-space: pre;
+            line-height: 1.3;
+        }
+
+        .nf-user {
+            color: #39ff14;
+            font-weight: bold;
+        }
+
+        .nf-label {
+            color: #39ff14;
+            font-weight: bold;
+        }
+
+
+        .terminal-input {
+            caret-color: #00ff41;
+            border-right: 2px solid rgba(0,255,65,0.8);
+            animation: terminalCaretBlink 1s steps(1) infinite;
+        }
+
+        @keyframes terminalCaretBlink {
+            0%, 49% { border-right-color: rgba(0,255,65,0.85); }
+            50%, 100% { border-right-color: transparent; }
+        }
+
+        @keyframes glitchText {
+            0% { transform: translate(0); text-shadow: 1px 0 red, -1px 0 blue; }
+            25% { transform: translate(-1px, 1px); text-shadow: -1px 0 red, 1px 0 blue; }
+            50% { transform: translate(1px, -1px); text-shadow: 1px 0 lime, -1px 0 magenta; }
+            75% { transform: translate(-1px, 0); text-shadow: -1px 0 red, 1px 0 cyan; }
+            100% { transform: translate(0); text-shadow: 1px 0 red, -1px 0 blue; }
+        }
+
+        .glitch-text {
+            display: inline-block;
+            color: #ff4d4d;
+            animation: glitchText .18s steps(2) 6;
+            font-weight: bold;
+        }
+
+        .desktop::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(255,255,255,0.02) 0px,
+                    rgba(255,255,255,0.02) 1px,
+                    transparent 2px,
+                    transparent 4px
+                );
+            mix-blend-mode: screen;
+            opacity: 0.18;
+            animation: scanlinesMove 6s linear infinite;
+        }
+
+        @keyframes scanlinesMove {
+            from { transform: translateY(0); }
+            to { transform: translateY(6px); }
+        }
+
+        .system-stats {
+            display: inline-flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: 10px;
+        }
+
+        .alive-flicker {
+            animation: aliveFlicker 3.5s infinite;
+        }
+
+        @keyframes aliveFlicker {
+            0%, 100% { opacity: 1; }
+            96% { opacity: 1; }
+            97% { opacity: .72; }
+            98% { opacity: .95; }
+            99% { opacity: .8; }
+        }
+
+        .lucky-ai-window {
+            position: absolute;
+            top: 110px;
+            left: 420px;
+            width: 760px;
+            height: 520px;
+            background: #080b10;
+            border: 2px solid #00ff41;
+            border-radius: 12px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 0 35px rgba(0,255,65,.25);
+            z-index: 350;
+            overflow: hidden;
+        }
+
+        .lucky-ai-header {
+            background: linear-gradient(90deg, rgba(0,255,65,.12), rgba(0,255,65,.03));
+            color: #00ff41;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,255,65,.35);
+            cursor: move;
+            font-weight: bold;
+        }
+
+        .lucky-ai-body {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 230px 1fr;
+            min-height: 0;
+        }
+
+        .lucky-ai-side {
+            border-right: 1px solid rgba(0,255,65,.2);
+            background: radial-gradient(circle at top, rgba(0,255,65,.08), transparent 70%);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lucky-avatar-frame {
+            width: 180px;
+            height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,.35);
+            border: 1px solid rgba(0,255,65,.3);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,255,65,.14) inset;
+        }
+
+        .lucky-avatar-frame video,
+        .lucky-avatar-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 12px rgba(0,255,65,.25));
+        }
+
+        .lucky-ai-status {
+            font-size: 11px;
+            color: #9dfdb5;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .lucky-ai-chat {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .lucky-ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .lucky-msg {
+            max-width: 82%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            line-height: 1.4;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+
+        .lucky-msg.user {
+            align-self: flex-end;
+            background: rgba(0,255,65,.15);
+            color: #dffff0;
+            border: 1px solid rgba(0,255,65,.25);
+        }
+
+        .lucky-msg.bot {
+            align-self: flex-start;
+            background: rgba(255,255,255,.05);
+            color: #d9ffe5;
+            border: 1px solid rgba(255,255,255,.08);
+        }
+
+        .lucky-ai-inputbar {
+            display: flex;
+            gap: 10px;
+            padding: 14px;
+            border-top: 1px solid rgba(0,255,65,.18);
+            background: rgba(0,0,0,.28);
+        }
+
+        .lucky-ai-input {
+            flex: 1;
+            background: #05070a;
+            color: #00ff41;
+            border: 1px solid rgba(0,255,65,.3);
+            border-radius: 8px;
+            padding: 10px 12px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .lucky-ai-send {
+            background: #00ff41;
+            color: #021006;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .snake-window {
+            position: absolute;
+            top: 130px;
+            left: 500px;
+            width: 420px;
+            height: 520px;
+            background: #080b10;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            z-index: 340;
+            overflow: hidden;
+            box-shadow: 0 0 28px rgba(0,255,65,.24);
+        }
+
+        .snake-header {
+            background: rgba(0,255,65,.08);
+            color: #00ff41;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,255,65,.3);
+            cursor: move;
+        }
+
+        .snake-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            gap: 10px;
+        }
+
+        .snake-info {
+            font-size: 12px;
+            color: #baffcb;
+            text-align: center;
+        }
+
+        #snakeCanvas {
+            background: #000;
+            border: 1px solid rgba(0,255,65,.35);
+            border-radius: 8px;
+            image-rendering: pixelated;
+            align-self: center;
+        }
+
+
+        .desktop {
+            padding-bottom: 46px;
+        }
+
+        .taskbar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 46px;
+            background: rgba(5, 9, 14, 0.96);
+            border-top: 1px solid #00ff41;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .taskbar-start {
+            min-width: 92px;
+            height: 32px;
+            border: 1px solid #00ff41;
+            background: rgba(0,255,65,0.1);
+            color: #00ff41;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .taskbar-apps {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .taskbar-app {
+            height: 32px;
+            min-width: 110px;
+            max-width: 180px;
+            padding: 0 12px;
+            border: 1px solid rgba(0,255,65,0.35);
+            background: rgba(255,255,255,0.05);
+            color: #d6ffe1;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+            white-space: nowrap;
+        }
+
+        .taskbar-app.active {
+            background: rgba(0,255,65,0.14);
+            color: #00ff41;
+            border-color: #00ff41;
+        }
+
+        .taskbar-clock {
+            min-width: 120px;
+            text-align: right;
+            color: #9bffb6;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    
+    </style>
+</head>
+<body>
+    <div class="boot-screen" id="bootScreen">
+        <div class="boot-content">
+            <div class="boot-logo" id="bootLogo"></div>
+            <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+            <div class="boot-text" id="bootMessage">Iniciando kernel SEM FIM...</div>
+        </div>
+    </div>
+
+    <div class="desktop" id="desktop">
+        <img class="wallpaper" src="https://images2.alphacoders.com/907/thumb-1920-907165.png" alt="">
+        
+        <div class="top-bar">
+            <div class="logo-area">
+                <img id="systemLogo" class="system-logo" src="">
+                <span>SEM FIM OS v3.0</span>
+            </div>
+            <div>🌐 <span id="networkStatus">Conectado</span> | <span id="datetime"></span> | <span id="currentUserBar">semfim</span>@system <span class="system-stats">| RAM <span id="memoryUsage">0.0</span> GB | CPU <span id="cpuUsage">0</span>%</span></div>
+        </div>
+        
+        <div class="icons">
+            <div class="icon" onclick="openTerminal()"><div class="icon-emoji">💀</div><span>Terminal</span></div>
+            <div class="icon" onclick="openBrowser()"><div class="icon-emoji">🦊</div><span>Browser</span></div>
+            <div class="icon" onclick="openExplorerGUI()"><div class="icon-emoji">📁</div><span>Arquivos</span></div>
+            <div class="icon" onclick="showInfo()"><div class="icon-emoji">⚡</div><span>Info</span></div>
+            <div class="icon" onclick="openLuckyAI()"><div class="icon-emoji">🤖</div><span>Lucky AI</span></div>
+            <div class="icon" onclick="openSnakeWindow()"><div class="icon-emoji">🎮</div><span>Snake</span></div>
+        </div>
+
+        <div class="terminal-window" id="terminal">
+            <div class="terminal-header" id="terminalHeader" ondblclick="toggleMaximizeTerminal()">
+                <span class="terminal-title">Terminal</span>
+                <div class="terminal-controls">
+                    <button class="control-btn minimize-btn" onclick="minimizeTerminal()" title="Minimizar">—</button>
+                    <button class="control-btn maximize-btn" onclick="toggleMaximizeTerminal()" title="Maximizar">▢</button>
+                    <button class="control-btn close-btn" onclick="closeTerminal()" title="Fechar">✕</button>
+                </div>
+            </div>
+            <div class="terminal-body" id="terminalBody">
+                <div class="terminal-input-line">
+                    <span class="terminal-prompt" id="prompt">semfim@system:~$</span>
+                    <input type="text" class="terminal-input" id="terminalInput" autofocus>
+                </div>
+            </div>
+        </div>
+
+        <div class="browser-window" id="browserWindow">
+            <div class="browser-header" id="browserHeader">
+                <div class="browser-toolbar">
+                    <button class="browser-nav-btn" onclick="browserBack()">◀</button>
+                    <button class="browser-nav-btn" onclick="browserForward()">▶</button>
+                    <button class="browser-nav-btn" onclick="browserReload()">⟳</button>
+                    <input type="text" class="browser-url" id="browserUrl" value="https://www.google.com" onkeypress="handleUrlEnter(event)">
+                    <div class="browser-controls"><button class="browser-nav-btn" onclick="minimizeBrowser()">—</button><div class="browser-close" onclick="closeBrowser()"></div></div>
+                </div>
+            </div>
+            <iframe class="browser-frame" id="browserFrame" src="https://www.google.com"></iframe>
+        </div>
+
+        <!-- EXPLORADOR DE ARQUIVOS GUI -->
+        <div class="explorer-window" id="explorerWindow">
+            <div class="explorer-header" id="explorerHeader">
+                <span class="explorer-title">📁 Explorador de Arquivos SEM FIM</span>
+                <div style="display:flex;gap:6px;align-items:center;"><button class="browser-nav-btn" style="width:28px;height:28px;" onclick="minimizeExplorer()">—</button><div class="browser-close" onclick="closeExplorerGUI()"></div></div>
+            </div>
+            <div class="explorer-toolbar">
+                <button class="explorer-btn" onclick="explorerGoBack()">◀ Voltar</button>
+                <button class="explorer-btn" onclick="explorerRefresh()">⟳ Atualizar</button>
+                <button class="explorer-btn" onclick="showNewFileModal()">📄 Novo Arquivo</button>
+                <button class="explorer-btn" onclick="showNewFolderModal()">📁 Nova Pasta</button>
+                <button class="explorer-btn" onclick="explorerGoHome()">🏠 Home</button>
+                <button class="explorer-btn" onclick="triggerImportFile()">⬆ Importar</button>
+                <button class="explorer-btn" onclick="exportCurrentFile()">⬇ Exportar Atual</button>
+            </div>
+            <div class="explorer-path">
+                <span>📍 Localização:</span>
+                <input type="text" class="path-input" id="explorerPathInput" readonly>
+            </div>
+            <div class="explorer-content" id="explorerContent"></div>
+        </div>
+
+        <!-- Editor de arquivos -->
+        <div class="editor-window" id="editorWindow">
+            <div class="editor-header" id="editorHeader">
+                <span class="editor-title" id="editorTitle">Editor de Arquivo</span>
+                <div style="display:flex;gap:6px;align-items:center;"><button class="browser-nav-btn" style="width:28px;height:28px;" onclick="minimizeEditor()">—</button><div class="browser-close" onclick="closeEditor()"></div></div>
+            </div>
+            <div class="editor-content">
+                <textarea class="editor-textarea" id="editorTextarea" placeholder="Digite o conteúdo do arquivo aqui..."></textarea>
+            </div>
+            <button class="editor-save" onclick="saveFileContent()">💾 Salvar</button>
+        </div>
+        <div class="taskbar" id="taskbar">
+            <button class="taskbar-start" onclick="openTerminal()">⚡ SEM FIM</button>
+            <div class="taskbar-apps" id="taskbarApps"></div>
+            <div class="taskbar-clock" id="taskbarClock"></div>
+        </div>
+    </div>
+
+    <input type="file" id="realFileInput"  style="display:none" onchange="importRealFile(event)">
+
+    <div class="lucky-ai-window" id="luckyAIWindow">
+        <div class="lucky-ai-header" id="luckyAIHeader">
+            <span>🤖 Lucky AI Assistant</span>
+            <div style="display:flex;gap:6px;align-items:center;"><button class="browser-nav-btn" style="width:28px;height:28px;" onclick="minimizeLuckyAI()">—</button><div class="browser-close" onclick="closeLuckyAI()"></div></div>
+        </div>
+        <div class="lucky-ai-body">
+            <div class="lucky-ai-side">
+                <div class="lucky-avatar-frame">
+                    <video id="luckyAIVideo" autoplay loop muted playsinline poster="lucky2.png">
+                        <source src="lucky2.mp4" type="video/mp4">
+                    </video>
+                    <img id="luckyAIImage" src="lucky2.png" alt="Lucky" style="display:none;">
+                </div>
+                <div class="lucky-ai-status alive-flicker">LUCKY CORE ONLINE
+Animação automática com fallback para imagem
+Digite qualquer coisa para conversar</div>
+            </div>
+            <div class="lucky-ai-chat">
+                <div class="lucky-ai-messages" id="luckyAIMessages"></div>
+                <div class="lucky-ai-inputbar">
+                    <input class="lucky-ai-input" id="luckyAIInput" placeholder="Fala com a Lucky..." onkeypress="handleLuckyAIEnter(event)">
+                    <button class="lucky-ai-send" onclick="sendLuckyMessage()">Enviar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="snake-window" id="snakeWindow">
+        <div class="snake-header" id="snakeHeader">
+            <span>🎮 Snake.exe</span>
+            <div style="display:flex;gap:6px;align-items:center;"><button class="browser-nav-btn" style="width:28px;height:28px;" onclick="minimizeSnake()">—</button><div class="browser-close" onclick="closeSnakeWindow()"></div></div>
+        </div>
+        <div class="snake-body">
+            <div class="snake-info">Setas para mover • <code>game snake</code> também abre o jogo • Score: <span id="snakeScore">0</span></div>
+            <canvas id="snakeCanvas" width="360" height="360"></canvas>
+            <div class="snake-info">Começa sozinho quando abrir a janela.</div>
+        </div>
+    </div>
+
+    <!-- Modais -->
+    <div class="modal" id="newFileModal">
+        <div class="modal-content">
+            <h3>📄 Criar Novo Arquivo</h3>
+            <input type="text" id="newFileName" placeholder="nome_do_arquivo.txt">
+            <button onclick="createNewFile()">Criar</button>
+            <button onclick="closeModal('newFileModal')">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="newFolderModal">
+        <div class="modal-content">
+            <h3>📁 Criar Nova Pasta</h3>
+            <input type="text" id="newFolderName" placeholder="nome_da_pasta">
+            <button onclick="createNewFolder()">Criar</button>
+            <button onclick="closeModal('newFolderModal')">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="editFileModal">
+        <div class="modal-content">
+            <h3>✏️ Editar Arquivo</h3>
+            <textarea id="editFileContent" rows="10" style="width:100%"></textarea>
+            <button onclick="saveEditFile()">Salvar</button>
+            <button onclick="closeModal('editFileModal')">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // ================= SISTEMA DE ARQUIVOS FUNCIONAL =================
+        let currentEditingFilePath = null;
+        
+        let fileSystem = {
+            currentDir: '/home/semfim',
+            home: '/home/semfim',
+            files: {}
+        };
+
+        // Estrutura de diretórios
+        let directories = ['/', '/home', '/home/semfim', '/home/semfim/Documentos', '/home/semfim/Downloads', '/home/semfim/Desktop', '/home/semfim/Imagens', '/home/semfim/Músicas', '/home/semfim/Vídeos'];
+
+        function loadFileSystem() {
+            const saved = localStorage.getItem('semfim_filesystem');
+            if(saved) {
+                const data = JSON.parse(saved);
+                fileSystem.files = data.files || {};
+                fileSystem.currentDir = data.currentDir || '/home/semfim';
+            } else {
+                fileSystem.files = {
+                    '/home/semfim/Desktop/README.txt': '📁 SEM FIM OS v3.0\n\nSistema Operacional Completo!\n\nFuncionalidades:\n✅ Explorador de Arquivos GUI\n✅ Terminal com comandos Linux\n✅ Navegador integrado\n✅ Sistema de arquivos funcional\n\nUse o explorador gráfico para gerenciar seus arquivos!',
+                    '/home/semfim/Documentos/projeto.txt': 'Projeto SEM FIM OS\nVersão: 3.0.0\n\nEste é um sistema operacional completo rodando no navegador.\n- Crie, edite e delete arquivos\n- Navegue por pastas\n- Interface gráfica intuitiva',
+                    '/home/semfim/.bashrc': 'alias ll="ls -la"\nalias la="ls -a"\nexport PS1="\\u@\\h:\\w\\$ "'
+                };
+            }
+            saveFileSystem();
+        }
+
+        function saveFileSystem() {
+            localStorage.setItem('semfim_filesystem', JSON.stringify({
+                files: fileSystem.files,
+                currentDir: fileSystem.currentDir
+            }));
+        }
+
+        function getFilesInDir(dirPath) {
+            const files = [];
+            const normalizedDir = dirPath.endsWith('/') ? dirPath : dirPath + '/';
+            
+            Object.keys(fileSystem.files).forEach(path => {
+                if(path.startsWith(normalizedDir) && path !== normalizedDir.slice(0, -1)) {
+                    const relative = path.slice(normalizedDir.length);
+                    if(!relative.includes('/')) {
+                        files.push({ name: relative, isFile: true, path: path });
+                    }
+                }
+            });
+            
+            directories.forEach(dir => {
+                if(dir.startsWith(normalizedDir) && dir !== normalizedDir.slice(0, -1)) {
+                    const relative = dir.slice(normalizedDir.length);
+                    if(!relative.includes('/') && relative !== '') {
+                        files.push({ name: relative + '/', isFile: false, path: dir });
+                    }
+                }
+            });
+            
+            return files;
+        }
+
+        function getCurrentPath() { return fileSystem.currentDir; }
+        
+        function changeDirectory(path) {
+            if(path === '/' || path === '') { fileSystem.currentDir = '/'; saveFileSystem(); return true; }
+            if(path === '~') { fileSystem.currentDir = '/home/semfim'; saveFileSystem(); return true; }
+            if(path === '..') {
+                if(fileSystem.currentDir === '/') return false;
+                const parts = fileSystem.currentDir.split('/');
+                parts.pop();
+                fileSystem.currentDir = parts.join('/') || '/';
+                saveFileSystem();
+                return true;
+            }
+            
+            let newPath = path.startsWith('/') ? path : fileSystem.currentDir + '/' + path;
+            if(directories.includes(newPath)) {
+                fileSystem.currentDir = newPath;
+                saveFileSystem();
+                return true;
+            }
+            return false;
+        }
+
+        function createFile(path, content = '') {
+            const fullPath = fileSystem.currentDir + '/' + path;
+            if(!fileSystem.files[fullPath]) {
+                fileSystem.files[fullPath] = content;
+                saveFileSystem();
+                return true;
+            }
+            return false;
+        }
+
+        function createFolder(folderName) {
+            const newPath = fileSystem.currentDir + '/' + folderName;
+            if(!directories.includes(newPath)) {
+                directories.push(newPath);
+                saveFileSystem();
+                return true;
+            }
+            return false;
+        }
+
+        function deleteFileOrFolder(path, isFile) {
+            if(isFile) {
+                const fullPath = fileSystem.currentDir + '/' + path;
+                if(fileSystem.files[fullPath]) {
+                    delete fileSystem.files[fullPath];
+                    saveFileSystem();
+                    return true;
+                }
+            } else {
+                const fullPath = fileSystem.currentDir + '/' + path.replace('/', '');
+                const index = directories.indexOf(fullPath);
+                if(index > -1) {
+                    directories.splice(index, 1);
+                    // Remover arquivos dentro da pasta
+                    Object.keys(fileSystem.files).forEach(file => {
+                        if(file.startsWith(fullPath + '/')) {
+                            delete fileSystem.files[file];
+                        }
+                    });
+                    saveFileSystem();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function readFile(path) {
+            const fullPath = fileSystem.currentDir + '/' + path;
+            return fileSystem.files[fullPath] || null;
+        }
+
+        function writeFile(path, content) {
+            const fullPath = fileSystem.currentDir + '/' + path;
+            fileSystem.files[fullPath] = content;
+            saveFileSystem();
+        }
+
+        // ================= EXPLORADOR GUI =================
+        function openExplorerGUI() {
+            registerWindow('explorerWindow', 'Arquivos');
+            showWindowFromTaskbar('explorerWindow');
+            explorerRefresh();
+        }
+
+        function closeExplorerGUI() {
+            document.getElementById('explorerWindow').style.display = 'none';
+            removeTaskbarButton('explorerWindow');
+        }
+
+        function explorerRefresh() {
+            const content = document.getElementById('explorerContent');
+            const pathInput = document.getElementById('explorerPathInput');
+            pathInput.value = getCurrentPath();
+            
+            const items = getFilesInDir(getCurrentPath());
+            content.innerHTML = '';
+            
+            // Botão voltar especial
+            if(getCurrentPath() !== '/') {
+                const backItem = document.createElement('div');
+                backItem.className = 'explorer-item';
+                backItem.onclick = () => { changeDirectory('..'); explorerRefresh(); };
+                backItem.innerHTML = '<div class="explorer-item-icon">📂</div><div class="explorer-item-name">../</div>';
+                content.appendChild(backItem);
+            }
+            
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'explorer-item';
+                div.oncontextmenu = (e) => { e.preventDefault(); showContextMenu(item, e); return false; };
+                div.ondblclick = () => {
+                    if(item.isFile) {
+                        openEditorGUI(item.name);
+                    } else {
+                        changeDirectory(item.path);
+                        explorerRefresh();
+                    }
+                };
+                div.innerHTML = `
+                    <div class="explorer-item-icon">${item.isFile ? '📄' : '📁'}</div>
+                    <div class="explorer-item-name">${item.name}</div>
+                `;
+                content.appendChild(div);
+            });
+        }
+
+        function explorerGoBack() {
+            changeDirectory('..');
+            explorerRefresh();
+        }
+
+        function explorerGoHome() {
+            changeDirectory('~');
+            explorerRefresh();
+        }
+
+        function showNewFileModal() {
+            document.getElementById('newFileName').value = '';
+            document.getElementById('newFileModal').style.display = 'flex';
+        }
+
+        function showNewFolderModal() {
+            document.getElementById('newFolderName').value = '';
+            document.getElementById('newFolderModal').style.display = 'flex';
+        }
+
+        function createNewFile() {
+            const name = document.getElementById('newFileName').value;
+            if(name) {
+                if(createFile(name, '')) {
+                    explorerRefresh();
+                    closeModal('newFileModal');
+                    addTerminalLine(`✅ Arquivo criado: ${name}`);
+                } else {
+                    alert('Arquivo já existe!');
+                }
+            }
+        }
+
+        function createNewFolder() {
+            const name = document.getElementById('newFolderName').value;
+            if(name) {
+                if(createFolder(name)) {
+                    explorerRefresh();
+                    closeModal('newFolderModal');
+                    addTerminalLine(`✅ Pasta criada: ${name}/`);
+                } else {
+                    alert('Pasta já existe!');
+                }
+            }
+        }
+
+        function openEditorGUI(fileName) {
+            const editor = document.getElementById('editorWindow');
+            const title = document.getElementById('editorTitle');
+            const textarea = document.getElementById('editorTextarea');
+            
+            currentEditingFilePath = fileName;
+            title.innerHTML = `✏️ Editando: ${fileName}`;
+            
+            const content = readFile(fileName) || '';
+            textarea.value = content;
+            
+            registerWindow('editorWindow', 'Editor');
+            editor.style.display = 'flex';
+            markWindowActive('editorWindow');
+            bringToFront('editorWindow');
+        }
+
+        function closeEditor() {
+            document.getElementById('editorWindow').style.display = 'none';
+            currentEditingFilePath = null;
+            removeTaskbarButton('editorWindow');
+        }
+
+        function saveFileContent() {
+            if(currentEditingFilePath) {
+                const content = document.getElementById('editorTextarea').value;
+                writeFile(currentEditingFilePath, content);
+                addTerminalLine(`✅ Arquivo salvo: ${currentEditingFilePath}`);
+                closeEditor();
+                explorerRefresh();
+            }
+        }
+
+        function showContextMenu(item, event) {
+            const confirmDelete = confirm(`Deletar ${item.name}?`);
+            if(confirmDelete) {
+                if(deleteFileOrFolder(item.name, item.isFile)) {
+                    addTerminalLine(`✅ Deletado: ${item.name}`);
+                    explorerRefresh();
+                }
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // ================= NAVEGADOR =================
+        let browserHistory = ['https://www.google.com'];
+        let browserHistoryIndex = 0;
+
+        function openBrowser() {
+            registerWindow('browserWindow', 'Browser');
+            showWindowFromTaskbar('browserWindow');
+        }
+
+        function closeBrowser() {
+            document.getElementById('browserWindow').style.display = 'none';
+            removeTaskbarButton('browserWindow');
+        }
+
+        function navigateTo(url) {
+            if(!url.startsWith('http')) url = 'https://' + url;
+            const frame = document.getElementById('browserFrame');
+            const urlInput = document.getElementById('browserUrl');
+            frame.src = url;
+            urlInput.value = url;
+            if(browserHistory[browserHistoryIndex + 1] !== url) {
+                browserHistory = browserHistory.slice(0, browserHistoryIndex + 1);
+                browserHistory.push(url);
+                browserHistoryIndex++;
+            }
+        }
+
+        function browserBack() { if(browserHistoryIndex > 0) { browserHistoryIndex--; navigateTo(browserHistory[browserHistoryIndex]); } }
+        function browserForward() { if(browserHistoryIndex < browserHistory.length - 1) { browserHistoryIndex++; navigateTo(browserHistory[browserHistoryIndex]); } }
+        function browserReload() { const frame = document.getElementById('browserFrame'); frame.src = frame.src; }
+        function handleUrlEnter(e) { if(e.key === 'Enter') navigateTo(e.target.value); }
+
+        // ================= TERMINAL =================
+        let commandHistory = [];
+
+        let currentUser = 'semfim';
+        let systemPassword = '1234';
+        let themeMode = 'matrix';
+        let snakeInterval = null;
+        let snakeState = null;
+
+        let windowRegistry = {};
+        let minimizedApps = {};
+        let zCounter = 500;
+
+        function registerWindow(id, title) {
+            if (!windowRegistry[id]) windowRegistry[id] = { title };
+        }
+
+        function bringToFront(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            zCounter += 1;
+            el.style.zIndex = String(zCounter);
+        }
+
+        function ensureTaskbarButton(id, title) {
+            const bar = document.getElementById('taskbarApps');
+            if (!bar) return null;
+            if (minimizedApps[id]) return minimizedApps[id];
+
+            const btn = document.createElement('button');
+            btn.className = 'taskbar-app';
+            btn.textContent = title;
+            btn.onclick = () => toggleWindowFromTaskbar(id);
+            bar.appendChild(btn);
+            minimizedApps[id] = btn;
+            return btn;
+        }
+
+        function markWindowActive(id) {
+            document.querySelectorAll('.taskbar-app').forEach(btn => btn.classList.remove('active'));
+            const title = windowRegistry[id]?.title || id;
+            const btn = ensureTaskbarButton(id, title);
+            if (btn) btn.classList.add('active');
+        }
+
+        function hideWindowToTaskbar(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = 'none';
+            markWindowActive(id);
+        }
+
+        function showWindowFromTaskbar(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = 'flex';
+            bringToFront(id);
+            markWindowActive(id);
+        }
+
+        function toggleWindowFromTaskbar(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const hidden = el.style.display === 'none' || getComputedStyle(el).display === 'none';
+            if (hidden) showWindowFromTaskbar(id);
+            else hideWindowToTaskbar(id);
+        }
+
+        function removeTaskbarButton(id) {
+            if (minimizedApps[id]) {
+                minimizedApps[id].remove();
+                delete minimizedApps[id];
+            }
+        }
+
+        function updateTaskbarClock() {
+            const clock = document.getElementById('taskbarClock');
+            if (clock) clock.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function askLuckyServer(userText) {
+            const model = document.getElementById('luckyApiModel')?.value?.trim() || '';
+            const res = await fetch('/api/lucky', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userText, model })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Falha ao conectar no servidor da Lucky');
+            }
+
+            const data = await res.json();
+            return data.reply || null;
+        }
+
+        function minimizeBrowser() { hideWindowToTaskbar('browserWindow'); }
+        function minimizeExplorer() { hideWindowToTaskbar('explorerWindow'); }
+        function minimizeLuckyAI() { hideWindowToTaskbar('luckyAIWindow'); }
+        function minimizeSnake() { hideWindowToTaskbar('snakeWindow'); }
+        function minimizeEditor() { hideWindowToTaskbar('editorWindow'); }
+    
+        function updateUserBar() {
+            const el = document.getElementById('currentUserBar');
+            if (el) el.textContent = currentUser;
+        }
+
+        function updateSystemStats() {
+            const mem = document.getElementById('memoryUsage');
+            const cpu = document.getElementById('cpuUsage');
+            if (mem) mem.textContent = (2.2 + Math.random() * 5.4).toFixed(1);
+            if (cpu) cpu.textContent = Math.floor(8 + Math.random() * 62);
+        }
+
+        function playBootSound() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                const ctx = new AudioContextClass();
+                const notes = [220, 330, 440, 392];
+                notes.forEach((freq, index) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.0001, ctx.currentTime + index * 0.09);
+                    gain.gain.exponentialRampToValueAtTime(0.03, ctx.currentTime + index * 0.09 + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + index * 0.09 + 0.11);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + index * 0.09);
+                    osc.stop(ctx.currentTime + index * 0.09 + 0.12);
+                });
+            } catch (e) {}
+        }
+
+        function setTheme(mode) {
+            const body = document.body;
+            const terminal = document.getElementById('terminal');
+            themeMode = mode;
+            if (mode === 'red') {
+                body.style.background = '#120a0a';
+                if (terminal) terminal.style.boxShadow = '0 10px 30px rgba(255,77,77,.18)';
+            } else if (mode === 'blue') {
+                body.style.background = '#07111d';
+                if (terminal) terminal.style.boxShadow = '0 10px 30px rgba(69,192,255,.18)';
+            } else {
+                body.style.background = '#0a0e12';
+                if (terminal) terminal.style.boxShadow = '0 10px 30px rgba(0,0,0,.45)';
+            }
+        }
+
+        function triggerImportFile() {
+            document.getElementById('realFileInput').click();
+        }
+
+        function importRealFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                createFile(file.name, e.target.result || '');
+                explorerRefresh();
+                addTerminalLine(`✅ Arquivo importado: ${file.name}`);
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function exportCurrentFile() {
+            const items = getFilesInDir(getCurrentPath()).filter(item => item.isFile);
+            if (!items.length) {
+                addTerminalLine('Nenhum arquivo atual para exportar nessa pasta.');
+                return;
+            }
+            const name = items[0].name;
+            const content = readFile(name) || '';
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            a.click();
+            URL.revokeObjectURL(url);
+            addTerminalLine(`⬇ Arquivo exportado: ${name}`);
+        }
+
+        function openLuckyAI() {
+            registerWindow('luckyAIWindow', 'Lucky AI');
+            const win = document.getElementById('luckyAIWindow');
+            showWindowFromTaskbar('luckyAIWindow');
+            const video = document.getElementById('luckyAIVideo');
+            const img = document.getElementById('luckyAIImage');
+            if (video) {
+                video.play().catch(() => {
+                    video.style.display = 'none';
+                    img.style.display = 'block';
+                });
+                video.onerror = () => {
+                    video.style.display = 'none';
+                    img.style.display = 'block';
+                };
+            }
+            if (!document.getElementById('luckyAIMessages').children.length) {
+                addLuckyBotMessage('Oi! Eu sou a Lucky. Posso conversar com você, responder coisas simples sobre o sistema e dar ideias novas pro SEM FIM OS.');
+            }
+        }
+
+        function closeLuckyAI() {
+            document.getElementById('luckyAIWindow').style.display = 'none';
+            removeTaskbarButton('luckyAIWindow');
+        }
+
+        function addLuckyUserMessage(text) {
+            const box = document.getElementById('luckyAIMessages');
+            const msg = document.createElement('div');
+            msg.className = 'lucky-msg user';
+            msg.textContent = text;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addLuckyBotMessage(text) {
+            const box = document.getElementById('luckyAIMessages');
+            const msg = document.createElement('div');
+            msg.className = 'lucky-msg bot';
+            msg.textContent = text;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function getLuckyReply(text) {
+            const msg = text.toLowerCase();
+            if (msg.includes('oi') || msg.includes('ola') || msg.includes('olá')) return 'Oiii ✨ teu sistema tá ficando muito brabo. Quer ideias de visual, comandos ou apps novos?';
+            if (msg.includes('terminal')) return 'Teu terminal já tá bem forte. Eu adicionaria tabs, comando history e um modo fullscreen com F11.';
+            if (msg.includes('arquivo')) return 'Dá pra evoluir o explorador com upload de imagem, preview e arrastar-e-soltar.';
+            if (msg.includes('jogo')) return 'Snake já foi adicionado 😈 depois tu pode meter Tetris, Pong ou um minigame estilo hacking.';
+            if (msg.includes('senha') || msg.includes('login')) return 'Agora teu sistema tem login. Você pode trocar com login NOME e passwd NOVA_SENHA.';
+            if (msg.includes('tema')) return 'Usa theme red, theme blue ou theme matrix no terminal. Dá um clima bem diferente pro sistema.';
+            if (msg.includes('help')) return 'Eu respondo melhor quando você fala o que quer melhorar: terminal, desktop, arquivos, visual, animação, apps.';
+            return 'Entendi. Posso te ajudar com visual, comandos, jogos, boot, efeitos, apps e organização do sistema.';
+        }
+
+        async function sendLuckyMessage() {
+            const input = document.getElementById('luckyAIInput');
+            const text = input.value.trim();
+            if (!text) return;
+            addLuckyUserMessage(text);
+            input.value = '';
+
+            try {
+                const reply = await askLuckyServer(text);
+                if (reply) {
+                    addLuckyBotMessage(reply);
+                    return;
+                }
+            } catch (err) {
+                addLuckyBotMessage('Não consegui falar com o servidor da Lucky agora.');
+                return;
+            }
+
+            addLuckyBotMessage(getLuckyReply(text));
+        }
+
+        function handleLuckyAIEnter(e) {
+            if (e.key === 'Enter') sendLuckyMessage();
+        }
+
+        function openSnakeWindow() {
+            registerWindow('snakeWindow', 'Snake');
+            showWindowFromTaskbar('snakeWindow');
+            initSnakeGame();
+        }
+
+        function closeSnakeWindow() {
+            document.getElementById('snakeWindow').style.display = 'none';
+            if (snakeInterval) clearInterval(snakeInterval);
+            snakeInterval = null;
+            removeTaskbarButton('snakeWindow');
+        }
+
+        function initSnakeGame() {
+            const canvas = document.getElementById('snakeCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const grid = 18;
+            snakeState = {
+                x: 10, y: 10, dx: 1, dy: 0, appleX: 5, appleY: 5,
+                trail: [{x:10,y:10}], tail: 4, score: 0
+            };
+
+            function spawnApple() {
+                snakeState.appleX = Math.floor(Math.random() * (canvas.width / grid));
+                snakeState.appleY = Math.floor(Math.random() * (canvas.height / grid));
+            }
+
+            function draw() {
+                snakeState.x += snakeState.dx;
+                snakeState.y += snakeState.dy;
+
+                if (snakeState.x < 0) snakeState.x = canvas.width / grid - 1;
+                if (snakeState.x >= canvas.width / grid) snakeState.x = 0;
+                if (snakeState.y < 0) snakeState.y = canvas.height / grid - 1;
+                if (snakeState.y >= canvas.height / grid) snakeState.y = 0;
+
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+
+                ctx.fillStyle = '#ff335f';
+                ctx.fillRect(snakeState.appleX * grid, snakeState.appleY * grid, grid - 2, grid - 2);
+
+                ctx.fillStyle = '#00ff41';
+                snakeState.trail.push({x: snakeState.x, y: snakeState.y});
+                while (snakeState.trail.length > snakeState.tail) snakeState.trail.shift();
+
+                snakeState.trail.forEach((part, index) => {
+                    ctx.fillRect(part.x * grid, part.y * grid, grid - 2, grid - 2);
+                    if (index !== snakeState.trail.length - 1 && part.x === snakeState.x && part.y === snakeState.y) {
+                        snakeState.tail = 4;
+                        snakeState.score = 0;
+                        document.getElementById('snakeScore').textContent = '0';
+                    }
+                });
+
+                if (snakeState.appleX === snakeState.x && snakeState.appleY === snakeState.y) {
+                    snakeState.tail++;
+                    snakeState.score++;
+                    document.getElementById('snakeScore').textContent = String(snakeState.score);
+                    spawnApple();
+                }
+            }
+
+            spawnApple();
+            if (snakeInterval) clearInterval(snakeInterval);
+            snakeInterval = setInterval(draw, 100);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!snakeState || document.getElementById('snakeWindow').style.display !== 'flex') return;
+            if (e.key === 'ArrowLeft' && snakeState.dx !== 1) { snakeState.dx = -1; snakeState.dy = 0; }
+            if (e.key === 'ArrowRight' && snakeState.dx !== -1) { snakeState.dx = 1; snakeState.dy = 0; }
+            if (e.key === 'ArrowUp' && snakeState.dy !== 1) { snakeState.dx = 0; snakeState.dy = -1; }
+            if (e.key === 'ArrowDown' && snakeState.dy !== -1) { snakeState.dx = 0; snakeState.dy = 1; }
+        });
+
+        function addGlitchMessage(text) {
+            addTerminalLine(`<span class="glitch-text">${text}</span>`);
+        }
+
+
+        let historyPosition = -1;
+        let currentPrompt = 'semfim@system:~$';
+
+        function updatePrompt() {
+            let dir = fileSystem.currentDir;
+            if(dir === '/home/semfim') dir = '~';
+            currentPrompt = `${currentUser}@system:${dir}$`;
+            document.getElementById('prompt').textContent = currentPrompt;
+        }
+
+        const commands = {
+            help: () => `╔════════════════════════════════════════════════════╗
+║            COMANDOS SEM FIM OS v3.0                ║
+╠════════════════════════════════════════════════════╣
+║  📁 Arquivos:                                      ║
+║  ls / ls -la    - Lista arquivos                   ║
+║  cd [dir]       - Navega entre pastas              ║
+║  pwd            - Mostra diretório atual           ║
+║  mkdir [nome]   - Cria pasta                       ║
+║  touch [arq]    - Cria arquivo                     ║
+║  cat [arq]      - Ver arquivo                      ║
+║  nano [arq]     - Editar arquivo                   ║
+║  rm [arq]       - Remove arquivo                   ║
+║  📁 Interface Gráfica:                             ║
+║  explorer       - Abre explorador GUI              ║
+║  🌐 Navegador:                                     ║
+║  firefox        - Abre navegador                   ║
+║  search [termo] - Pesquisa Google                  ║
+║  ⚡ Sistema:                                       ║
+║  clear          - Limpa terminal                   ║
+║  neofetch       - Info do sistema                  ║
+║  echo [txt]     - Escreve texto                    ║
+║  whoami         - Usuário atual                    ║
+║  date / uname   - Info do sistema                  ║
+║  history        - Histórico                        ║
+║  login [nome]   - Troca usuário                    ║
+║  passwd [senha] - Troca senha                 ║
+║  chmod          - Permissões                  ║
+║  theme [modo]   - matrix/red/blue                  ║
+║  game snake     - Abre o jogo                      ║
+║  lucky          - Abre app Lucky AI                ║
+║  reboot         - Reinicia                         ║
+║  exit           - Fecha terminal                   ║
+╚════════════════════════════════════════════════════╝`,
+            ls: (args) => {
+                let items = getFilesInDir(getCurrentPath());
+                let showAll = args.includes('-a');
+                if(!showAll) items = items.filter(i => !i.name.startsWith('.'));
+                if(args.includes('-l')) {
+                    return items.map(i => `${i.isFile ? '-rw-r--r--' : 'drwxr-xr-x'} 1 semfim semfim 4096 ${new Date().toLocaleDateString()} ${i.name}`).join('\n');
+                }
+                return items.map(i => i.name).join('  ') || '(vazio)';
+            },
+            cd: (args) => { if(changeDirectory(args[0] || '~')) { updatePrompt(); return ''; } return `cd: ${args[0]}: Pasta não encontrada`; },
+            pwd: () => getCurrentPath(),
+            mkdir: (args) => { if(createFolder(args[0])) { explorerRefresh(); return `✅ Pasta criada: ${args[0]}/`; } return `Pasta já existe`; },
+            touch: (args) => { if(createFile(args[0], '')) { explorerRefresh(); return `✅ Arquivo criado: ${args[0]}`; } return `Arquivo já existe`; },
+            cat: (args) => { const c = readFile(args[0]); return c !== null ? c : `Arquivo não encontrado`; },
+            nano: (args) => { openEditorGUI(args[0]); return `📝 Editando: ${args[0]}`; },
+            rm: (args) => { if(deleteFileOrFolder(args[0], true)) { explorerRefresh(); return `✅ Removido: ${args[0]}`; } return `Arquivo não encontrado`; },
+            explorer: () => { openExplorerGUI(); return "📁 Explorador de Arquivos aberto!"; },
+            firefox: () => { openBrowser(); return "🦊 Navegador aberto!"; },
+            search: (args) => { navigateTo('https://www.google.com/search?q=' + encodeURIComponent(args.join(' '))); openBrowser(); return `🔍 Pesquisando: ${args.join(' ')}`; },
+            clear: () => { clearTerminal(); return null; },
+            neofetch: () => `
+<div style="display:flex; gap:20px; align-items:flex-start;">
+
+   <video autoplay loop muted playsinline width="350" style="
+    border-radius:6px;
+    filter: drop-shadow(0 0 10px #00ff41);
+">
+  <source src="lucky2.mp4" type="video/mp4">
+</video>
+
+    <div style="white-space:pre; line-height:1.4;">
+<span style="color:#39ff14; font-weight:bold;">user@semfim-OS</span>
+<span style="color:#39ff14;">OS:</span> Mint 17.3 rosa
+<span style="color:#39ff14;">Kernel:</span> x86_64 Linux 3.19.0-32-generic
+<span style="color:#39ff14;">Uptime:</span> 52m
+<span style="color:#39ff14;">Packages:</span> 2316
+<span style="color:#39ff14;">Shell:</span> bash 4.3.11
+<span style="color:#39ff14;">Resolution:</span> 1280x800
+<span style="color:#39ff14;">DE:</span> XFCE4
+<span style="color:#39ff14;">WM:</span> Xfwm4
+<span style="color:#39ff14;">WM Theme:</span> Lines-Dark
+<span style="color:#39ff14;">GTK Theme:</span> starling [GTK2]
+<span style="color:#39ff14;">Icon Theme:</span> Ultra-Flat-Green
+<span style="color:#39ff14;">Font:</span> Noto Sans 10
+<span style="color:#39ff14;">CPU:</span> Intel Core2 Duo CPU T6400 @ 2GHz
+<span style="color:#39ff14;">GPU:</span> Mesa DRI Intel(R) 965GM
+<span style="color:#39ff14;">RAM:</span> 1238MiB / 3943MiB
+    </div> 
+ </div>
+`,
+
+            echo: (args) => args.join(' '),
+            whoami: () => currentUser,
+            date: () => new Date().toString(),
+            uname: () => 'Linux semfim 3.0.0 x86_64 JavaScript Kernel',
+            history: () => commandHistory.join('\n') || '(vazio)',
+            clearhistory: () => { commandHistory = []; historyPosition = -1; return 'history limpa'; },
+            login: (args) => {
+                currentUser = (args[0] || 'guest').replace(/[^a-zA-Z0-9_-]/g, '') || 'guest';
+                updatePrompt();
+                updateUserBar();
+                return `logado como ${currentUser}`;
+            },
+            passwd: (args) => {
+                systemPassword = args[0] || systemPassword;
+                return 'senha fake alterada com sucesso';
+            },
+            chmod: (args) => `permissões alteradas para ${args.join(' ') || 'arquivo'} (simulação)`,
+            theme: (args) => { setTheme(args[0] || 'matrix'); return `tema aplicado: ${args[0] || 'matrix'}`; },
+            lucky: () => { openLuckyAI(); return 'Lucky AI aberto'; },
+            game: (args) => {
+                if ((args[0] || '').toLowerCase() === 'snake') {
+                    openSnakeWindow();
+                    return 'Abrindo Snake.exe...';
+                }
+                return 'jogo disponível: snake';
+            },
+            reboot: () => { setTimeout(() => location.reload(), 500); return 'Reiniciando...'; },
+            exit: () => { closeTerminal(); return null; }
+        };
+
+        function executeCommand(cmd) {
+            if(!cmd.trim()) return '';
+            commandHistory.push(cmd);
+            historyPosition = commandHistory.length;
+            const parts = cmd.trim().split(/\s+/);
+            const command = parts[0].toLowerCase();
+            const args = parts.slice(1);
+            if(commands[command]) { let r = commands[command](args); return r !== null ? r : ''; }
+            addGlitchMessage(`comando não encontrado: ${command}`);
+            return '';
+        }
+
+        function addTerminalLine(text) {
+            const terminalBody = document.getElementById('terminalBody');
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.innerHTML = text;
+            terminalBody.insertBefore(line, terminalBody.lastElementChild);
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+        }
+
+        function clearTerminal() {
+            const terminalBody = document.getElementById('terminalBody');
+            const inputLine = terminalBody.lastElementChild;
+            terminalBody.innerHTML = '';
+            terminalBody.appendChild(inputLine);
+        }
+
+        function setupTerminal() {
+            const input = document.getElementById('terminalInput');
+            input.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') {
+                    addTerminalLine(`${currentPrompt} ${input.value}`);
+                    const output = executeCommand(input.value);
+                    if(output) output.split('\n').forEach(line => { if(line.trim()) addTerminalLine(line); });
+                    input.value = '';
+                    updatePrompt();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'ArrowUp' && historyPosition > 0) { historyPosition--; input.value = commandHistory[historyPosition]; e.preventDefault(); }
+                if(e.key === 'ArrowDown' && historyPosition < commandHistory.length - 1) { historyPosition++; input.value = commandHistory[historyPosition]; e.preventDefault(); }
+            });
+        }
+
+        function openTerminal() {
+            registerWindow('terminal', 'Terminal');
+            showWindowFromTaskbar('terminal');
+            setTimeout(() => document.getElementById('terminalInput').focus(), 100);
+        }
+        function closeTerminal() {
+            document.getElementById('terminal').style.display = 'none';
+            removeTaskbarButton('terminal');
+        }
+        function showInfo() { addTerminalLine(commands.neofetch()); openTerminal(); }
+        function updateDateTime() {
+            document.getElementById('datetime').innerHTML = new Date().toLocaleString('pt-BR');
+            updateTaskbarClock();
+        }
+        function updateNetworkStatus() { document.getElementById('networkStatus').innerHTML = ' Conectado'; }
+
+
+        let terminalState = {
+            minimized: false,
+            maximized: false,
+            previous: null
+        };
+
+        function appendTerminalHTML(htmlContent) {
+            const terminalBody = document.getElementById('terminalBody');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'terminal-line';
+            wrapper.innerHTML = htmlContent;
+            terminalBody.insertBefore(wrapper, terminalBody.lastElementChild);
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+        }
+
+        function minimizeTerminal() {
+            hideWindowToTaskbar('terminal');
+        }
+
+        function toggleMaximizeTerminal() {
+            const terminal = document.getElementById('terminal');
+            const body = document.getElementById('terminalBody');
+
+            if (terminalState.minimized) {
+                body.style.display = 'block';
+                terminalState.minimized = false;
+            }
+
+            if (!terminalState.maximized) {
+                terminalState.previous = {
+                    top: terminal.style.top || '150px',
+                    left: terminal.style.left || '105px',
+                    width: terminal.style.width || '1140px',
+                    height: terminal.style.height || '625px'
+                };
+                terminal.style.top = '28px';
+                terminal.style.left = '0px';
+                terminal.style.width = '100vw';
+                terminal.style.height = 'calc(100vh - 28px)';
+                terminalState.maximized = true;
+            } else {
+                terminal.style.top = terminalState.previous.top;
+                terminal.style.left = terminalState.previous.left;
+                terminal.style.width = terminalState.previous.width;
+                terminal.style.height = terminalState.previous.height;
+                terminalState.maximized = false;
+            }
+        }
+
+        function bootTerminalView() {
+            openTerminal();
+            appendTerminalHTML(commands.neofetch());
+            const input = document.getElementById('terminalInput');
+            if (input) input.focus();
+        }
+
+        function initSystem() {
+            document.getElementById('systemLogo').src = "lucky.png";
+            document.getElementById('bootLogo').innerHTML = `<pre style="color:#0f0;">${`
+    ███████╗███████╗███╗   ███╗    ███████╗██╗███╗   ███╗
+    ██╔════╝██╔════╝████╗ ████║    ██╔════╝██║████╗ ████║
+    ███████╗█████╗  ██╔████╔██║    █████╗  ██║██╔████╔██║
+    ╚════██║██╔══╝  ██║╚██╔╝██║    ██╔══╝  ██║██║╚██╔╝██║
+    ███████║███████╗██║ ╚═╝ ██║    ██║     ██║██║ ╚═╝ ██║
+    ╚══════╝╚══════╝╚═╝     ╚═╝    ╚═╝     ╚═╝╚═╝     ╚═╝
+            `}</pre>`;
+            loadFileSystem();
+            updatePrompt();
+            setupTerminal();
+            setInterval(updateDateTime, 1000);
+            updateDateTime();
+            updateNetworkStatus();
+            updateUserBar();
+            updateSystemStats();
+            setInterval(updateSystemStats, 1800);
+            playBootSound();
+            bootTerminalView();
+        }
+
+
+        const bootMessages = [
+            'Montando /dev/semfim...',
+            'Carregando módulos do kernel...',
+            'Inicializando Lucky Core...',
+            'Sincronizando memória virtual...',
+            'Preparando desktop SEM FIM...',
+            'Ativando sistema gráfico...'
+        ];
+
+        let progress = 0;
+        const bootInterval = setInterval(() => {
+            progress += Math.random() * 12;
+            document.getElementById('bootMessage').textContent = bootMessages[Math.floor((progress / 100) * bootMessages.length)] || 'Iniciando kernel SEM FIM...';
+            if(progress >= 100) {
+                clearInterval(bootInterval);
+                document.getElementById('bootMessage').innerHTML = '✅ SEM FIM OS - Pronto!';
+                setTimeout(() => {
+                    document.getElementById('bootScreen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('bootScreen').style.display = 'none';
+                        document.getElementById('desktop').style.display = 'block';
+                        initSystem();
+                    }, 1000);
+                }, 500);
+            }
+            document.getElementById('progressBar').style.width = progress + '%';
+        }, 80);
+
+        function makeDraggable() {
+            const windows = [
+                { el: 'terminal', h: 'terminalHeader' },
+                { el: 'browserWindow', h: 'browserHeader' },
+                { el: 'explorerWindow', h: 'explorerHeader' },
+                { el: 'editorWindow', h: 'editorHeader' },
+                { el: 'luckyAIWindow', h: 'luckyAIHeader' },
+                { el: 'snakeWindow', h: 'snakeHeader' }
+            ];
+            windows.forEach(w => {
+                const el = document.getElementById(w.el);
+                const h = document.getElementById(w.h);
+                if(!el || !h) return;
+                let drag = false, x, y;
+                h.addEventListener('mousedown', (e) => {
+                    if (w.el === 'terminal' && terminalState.maximized) return;
+                    if(e.target === h || h.contains(e.target)) {
+                        drag = true;
+                        x = e.clientX - el.offsetLeft;
+                        y = e.clientY - el.offsetTop;
+                        el.style.position = 'absolute';
+                        bringToFront(w.el);
+                    }
+                });
+                document.addEventListener('mousemove', (e) => { if(drag) { el.style.left = Math.max(0, e.clientX - x) + 'px'; el.style.top = Math.max(0, e.clientY - y) + 'px'; } });
+                document.addEventListener('mouseup', () => { drag = false; });
+            });
+        }
+        setTimeout(makeDraggable, 1500);
+    </script>
+</body>
+</html>

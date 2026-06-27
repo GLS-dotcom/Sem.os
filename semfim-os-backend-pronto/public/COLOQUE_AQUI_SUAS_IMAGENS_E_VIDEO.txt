@@ -1,0 +1,1 @@
+Coloque lucky.png, lucky2.png e lucky2.mp4 nesta pasta public.
