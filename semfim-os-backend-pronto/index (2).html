@@ -3166,19 +3166,27 @@ code{background:#08110d;padding:2px 6px;border-radius:6px;}
         }
 
         async function askLucky(text) {
-            try {
-                const res = await fetch("https://api.monkedev.com/fun/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ msg: text })
-                });
-                const data = await res.json();
-                if (data && data.response) return data.response;
-                throw new Error("sem resposta");
-            } catch (e) {
-                return localLuckyBrain(text);
-            }
+    try {
+        const response = await fetch('/api/lucky', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+        
+        const data = await response.json();
+        
+        if (data.reply) {
+            return data.reply;
+        } else if (data.error) {
+            console.warn('Erro da API:', data.error);
+            return localLuckyBrain(text);
         }
+        throw new Error('Resposta inválida');
+    } catch (e) {
+        console.warn('Fallback para modo local:', e);
+        return localLuckyBrain(text);
+    }
+}
 
         function localLuckyBrain(text) {
             const msg = text.toLowerCase();
