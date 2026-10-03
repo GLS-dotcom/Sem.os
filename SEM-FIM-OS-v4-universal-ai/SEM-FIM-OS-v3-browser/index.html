@@ -3669,8 +3669,8 @@ code{background:#08110d;padding:2px 6px;border-radius:6px;}
         const SYSTEM_VERSION = '6.2.1';
         const AUTH_STORAGE_KEY = 'semfim_auth_users';
         const AUTH_SESSION_KEY = 'semfim_auth_session';
-        // Em modo 100% navegador não existe chave administrativa secreta.
-
+        const RECOVERY_MASTER_KEY = 'SEM-FIM-DEV-ROOT-2613';
+        
         function hashPassword(password) {
             try {
                 return btoa(unescape(encodeURIComponent(String(password)))).split('').reverse().join('');
@@ -3884,7 +3884,31 @@ code{background:#08110d;padding:2px 6px;border-radius:6px;}
         }
 
         function resetPasswordWithDeveloperKey() {
-            setBootAuthStatus('A recuperação segura exige um serviço externo. Este modo local não oferece redefinição administrativa.', true);
+            const store = getAuthStore();
+            const username = (document.getElementById('loginUsername')?.value || '').trim();
+            const master = document.getElementById('recoveryMasterPassword')?.value || '';
+            const user = store.users[username];
+
+            if (!username) return setBootAuthStatus('Digite o nome do login que será liberado.', true);
+            if (!user) return setBootAuthStatus('Esse login não existe.', true);
+            if (master !== RECOVERY_MASTER_KEY) {
+                appendBootKernel('[ FAIL ] Chave de recuperação inválida.');
+                return setBootAuthStatus('Senha específica inválida.', true);
+            }
+
+            user.passwordOptional = true;
+            user.recoveryUnlockedAt = new Date().toISOString();
+            store.recoveryUnlockedUser = username;
+            store.lastUser = username;
+            saveAuthStore(store);
+
+            appendBootKernel('[ OK ] Login sem senha liberado para ' + username);
+            setBootAuthStatus('Login temporário sem senha liberado. Entre e troque a senha pelo terminal com: passwd NOVA_SENHA', false, true);
+            const recoveryInput = document.getElementById('recoveryMasterPassword');
+            if (recoveryInput) recoveryInput.value = '';
+            const loginInput = document.getElementById('loginPassword');
+            if (loginInput) loginInput.value = '';
+            hideRecoveryMode();
         }
 
         function changeCurrentUserPassword(newPassword) {
@@ -3997,56 +4021,38 @@ code{background:#08110d;padding:2px 6px;border-radius:6px;}
 
         function setupBasicFrontendProtection() {
             document.addEventListener('contextmenu', (e) => e.preventDefault());
-
-            document.addEventListener('dragstart', (e) => {
-                const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-                const target = e.target;
-                const allowDrag =
-                    (target && typeof target.closest === 'function' && (
-                        target.closest('.game-option') ||
-                        target.closest('#gameOptions') ||
-                        target.closest('#gameHyper') ||
-                        target.closest('.game-window')
-                    )) ||
-                    (target && target.getAttribute && target.getAttribute('draggable') === 'true');
-
-                if (!allowDrag && tag !== 'input' && tag !== 'textarea') e.preventDefault();
-            });
-
-            document.addEventListener('selectstart', (e) => {
-                const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-                if (tag !== 'input' && tag !== 'textarea') e.preventDefault();
-            });
-
-            document.addEventListener('copy', (e) => {
-                const active = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-                if (active !== 'input' && active !== 'textarea') e.preventDefault();
-            });
+            document.addEventListener('dragstart', (e) => e.preventDefault());
+            document.addEventListener('selectstart', (e) => e.preventDefault());
+            document.addEventListener('copy', (e) => e.preventDefault());
 
             document.addEventListener('keydown', (e) => {
-                const key = (e.key || '').toLowerCase();
-                const blocked =
-                    key === 'f12' ||
+                const key = String(e.key || '').toLowerCase();
+                if (
+                    e.key === 'F12' ||
                     (e.ctrlKey && e.shiftKey && ['i', 'j', 'c', 'k'].includes(key)) ||
-                    (e.ctrlKey && ['u', 's'].includes(key));
-                if (blocked) {
+                    (e.ctrlKey && ['u', 's'].includes(key))
+                ) {
                     e.preventDefault();
-                    openSecurityOverlay();
-                    return false;
+                    e.stopPropagation();
                 }
             });
 
             devtoolsCheckInterval = setInterval(() => {
-                const widthGap = window.outerWidth - window.innerWidth;
-                const heightGap = window.outerHeight - window.innerHeight;
-                const opened = widthGap > 160 || heightGap > 160;
+                const threshold = 160;
+                const opened =
+                    (window.outerWidth - window.innerWidth > threshold) ||
+                    (window.outerHeight - window.innerHeight > threshold);
+
+                const overlay = document.getElementById('securityOverlay');
+
                 if (opened && !devtoolsOpened) {
                     devtoolsOpened = true;
-                    openSecurityOverlay();
-                } else if (!opened) {
+                    if (overlay) overlay.style.display = 'flex';
+                } else if (!opened && devtoolsOpened) {
                     devtoolsOpened = false;
+                    if (overlay) overlay.style.display = 'none';
                 }
-            }, 1200);
+            }, 1000);
         }
 
         setupBasicFrontendProtection();
